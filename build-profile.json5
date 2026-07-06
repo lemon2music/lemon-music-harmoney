@@ -1,0 +1,69 @@
+{
+  "app": {
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "compatibleSdkVersion": "5.0.0(12)",
+        "runtimeOS": "HarmonyOS",
+        "buildOption": {
+          "strictMode": {
+            "caseSensitiveCheck": true,
+            "useNormalizedOHMUrl": true
+          }
+        },
+        "targetSdkVersion": "5.0.0(12)"
+      },
+      {
+        "name": "android",
+        "signingConfig": "default",
+        "compatibleSdkVersion": 12,
+        "runtimeOS": "OpenHarmony",
+        "buildOption": {
+          "strictMode": {
+            "caseSensitiveCheck": true,
+            "useNormalizedOHMUrl": true
+          }
+        }
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug"
+      },
+      {
+        "name": "release"
+      }
+    ],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "storeFile": "D:/HarmonyNext/cert/lemon_music.p12",
+          "storePassword": "0000001A3506C33BAE0C27B759FA7348BB0C241C0420AD901403FD2CE98D4FB90A26C86D621D822B4D50",
+          "keyAlias": "lemon_music",
+          "keyPassword": "0000001AB4591CF7519EFB024FFEA7AD8837DD2D8AFDAE94D5DFD4C74902F90F939D2DE71E599949555A",
+          "signAlg": "SHA256withECDSA",
+          "profile": "D:/HarmonyNext/cert/lemon_musicDebug.p7b",
+          "certpath": "D:/HarmonyNext/cert/lemon_music.cer"
+        }
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default",
+            "android"
+          ]
+        }
+      ]
+    }
+  ]
+}
