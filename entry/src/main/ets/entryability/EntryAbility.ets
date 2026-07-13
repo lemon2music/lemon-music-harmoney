@@ -3,10 +3,20 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import avplayerClass from '../services/avplayermanager';
 import router from '@ohos.router'
+import { DeeplinkHandler } from '../services/deeplinkHandler';
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onCreate');
+
+    // Handle deeplink if present
+    const uri = want.uri ?? (want.parameters?.uri as string | undefined);
+    if (uri) {
+      console.info('EntryAbility: Received deeplink:', uri);
+
+      // Store URI for processing after context is set
+      appStorage.setOrCreate('pendingDeeplink', uri);
+    }
   }
 
   onDestroy(): void {
@@ -24,6 +34,18 @@ export default class EntryAbility extends UIAbility {
     console.info('MusicNotification: 已配置通知管理器的跳转目标')
     avplayerClass.init().then(async ()=>{
       console.log('播放器初始化成功');
+
+      // Process pending deeplink if present
+      const pendingDeeplink = appStorage.get('pendingDeeplink') as string;
+      if (pendingDeeplink) {
+        console.info('EntryAbility: Processing pending deeplink:', pendingDeeplink);
+        appStorage.setOrCreate('pendingDeeplink', ''); // Clear the pending deeplink
+
+        const action = DeeplinkHandler.parseDeeplink(pendingDeeplink);
+        if (action) {
+          await DeeplinkHandler.processAction(action);
+        }
+      }
     })
 
     windowStage.loadContent('pages/Index', (err) => {
@@ -51,7 +73,24 @@ export default class EntryAbility extends UIAbility {
   }
 
   onNewWant(want: Want): void {
-    // 点击通知后进入播放页
-    router.pushUrl({ url: 'pages/Playnow' })
+    // Check for deeplink URI
+    const uri = want.uri ?? (want.parameters?.uri as string | undefined);
+    if (uri) {
+      console.info('EntryAbility: Received deeplink in onNewWant:', uri);
+
+      const action = DeeplinkHandler.parseDeeplink(uri);
+      if (action) {
+        // Process async without blocking
+        DeeplinkHandler.processAction(action).catch(error => {
+          console.error('EntryAbility: Failed to process deeplink:', error);
+        });
+        return;
+      }
+    }
+
+    // Default behavior: navigate to Playnow (for notification clicks)
+    router.pushUrl({ url: 'pages/Playnow' }).catch(error => {
+      console.error('EntryAbility: Failed to navigate to Playnow:', error);
+    });
   }
 }
