@@ -34,6 +34,18 @@ export default class EntryAbility extends UIAbility {
     console.info('MusicNotification: 已配置通知管理器的跳转目标')
     avplayerClass.init().then(async ()=>{
       console.log('播放器初始化成功');
+
+      // Process pending deeplink if present
+      const pendingDeeplink = appStorage.get('pendingDeeplink') as string;
+      if (pendingDeeplink) {
+        console.info('EntryAbility: Processing pending deeplink:', pendingDeeplink);
+        appStorage.setOrCreate('pendingDeeplink', ''); // Clear the pending deeplink
+
+        const action = DeeplinkHandler.parseDeeplink(pendingDeeplink);
+        if (action) {
+          await DeeplinkHandler.processAction(action);
+        }
+      }
     })
 
     windowStage.loadContent('pages/Index', (err) => {
