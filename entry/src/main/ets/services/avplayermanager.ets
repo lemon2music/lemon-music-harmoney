@@ -547,6 +547,38 @@ export default class avplayerClass {
     }
   }
 
+  /**
+   * Play a song by its name
+   * @param songName The name of the song to play
+   * Falls back to first song if not found
+   */
+  static async playSongByName(songName: string): Promise<void> {
+    if (!avplayerClass.player) {
+      await avplayerClass.init();
+    }
+
+    if (!avplayerClass.player) {
+      throw new Error('Player initialization failed');
+    }
+
+    if (!songName || songName.trim().length === 0) {
+      throw new Error('Invalid song name');
+    }
+
+    // Search for exact match in playlist
+    const searchIndex = avplayerClass.playlist.findIndex(
+      song => song.name === songName.trim()
+    );
+
+    // Use found index or fallback to first song
+    const targetIndex = searchIndex >= 0 ? searchIndex : 0;
+
+    console.log(`playSongByName: "${songName}" -> index ${targetIndex}`);
+
+    // Play the song using existing method
+    await avplayerClass.playSongByIndex(targetIndex);
+  }
+
   static updatestate(): void {
     const currentSong =
       avplayerClass.playindex >= 0 &&
