@@ -3,10 +3,20 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import avplayerClass from '../services/avplayermanager';
 import router from '@ohos.router'
+import { DeeplinkHandler } from '../services/deeplinkHandler';
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onCreate');
+
+    // Handle deeplink if present
+    if (want.parameters?.uri) {
+      const uri = want.parameters.uri as string;
+      console.info('EntryAbility: Received deeplink:', uri);
+
+      // Store URI for processing after context is set
+      appStorage.setOrCreate('pendingDeeplink', uri);
+    }
   }
 
   onDestroy(): void {
