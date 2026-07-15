@@ -179,7 +179,7 @@ export struct my_page {
           .margin({ right:10 })
           .onClick(()=>{
             // 清除后端会话与本地登录状态并返回主页面
-            AuthService.logout()
+            AuthService.logout().catch((e: Object) => console.error('logout failed', e))
             this.isLogin = false
             this.selectMineAfterLogin = false
             router.replaceUrl({ url: 'pages/mainpage' })
