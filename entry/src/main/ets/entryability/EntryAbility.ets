@@ -4,6 +4,7 @@ import { window } from '@kit.ArkUI';
 import avplayerClass from '../services/avplayermanager';
 import router from '@ohos.router'
 import { DeeplinkHandler } from '../services/deeplinkHandler';
+import { BusinessError } from '@kit.BasicServicesKit';
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
@@ -15,7 +16,7 @@ export default class EntryAbility extends UIAbility {
       console.info('EntryAbility: Received deeplink:', uri);
 
       // Store URI for processing after context is set
-      appStorage.setOrCreate('pendingDeeplink', uri);
+      AppStorage.setOrCreate('pendingDeeplink', uri);
     }
   }
 
@@ -30,16 +31,16 @@ export default class EntryAbility extends UIAbility {
     const rm = this.context.resourceManager;
     avplayerClass.setContext(this.context.cacheDir, this.context.filesDir, (path: string) => rm.getRawFileDescriptor(path));
 
-    
+
     console.info('MusicNotification: 已配置通知管理器的跳转目标')
     avplayerClass.init().then(async ()=>{
       console.log('播放器初始化成功');
 
       // Process pending deeplink if present
-      const pendingDeeplink = appStorage.get('pendingDeeplink') as string;
+      const pendingDeeplink = AppStorage.get('pendingDeeplink') as string;
       if (pendingDeeplink) {
         console.info('EntryAbility: Processing pending deeplink:', pendingDeeplink);
-        appStorage.setOrCreate('pendingDeeplink', ''); // Clear the pending deeplink
+        AppStorage.setOrCreate('pendingDeeplink', ''); // Clear the pending deeplink
 
         const action = DeeplinkHandler.parseDeeplink(pendingDeeplink);
         if (action) {
@@ -81,7 +82,7 @@ export default class EntryAbility extends UIAbility {
       const action = DeeplinkHandler.parseDeeplink(uri);
       if (action) {
         // Process async without blocking
-        DeeplinkHandler.processAction(action).catch(error => {
+        DeeplinkHandler.processAction(action).catch((error: BusinessError) => {
           console.error('EntryAbility: Failed to process deeplink:', error);
         });
         return;
@@ -89,7 +90,7 @@ export default class EntryAbility extends UIAbility {
     }
 
     // Default behavior: navigate to Playnow (for notification clicks)
-    router.pushUrl({ url: 'pages/Playnow' }).catch(error => {
+    router.pushUrl({ url: 'pages/Playnow' }).catch((error: BusinessError) => {
       console.error('EntryAbility: Failed to navigate to Playnow:', error);
     });
   }
