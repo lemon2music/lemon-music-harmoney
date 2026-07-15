@@ -553,7 +553,10 @@ export default class avplayerClass {
    * Falls back to first song if not found
    */
   static async playSongByName(songName: string): Promise<void> {
+    console.info('[AVPlayerManager] playSongByName called with:', songName);
+
     if (!avplayerClass.player) {
+      console.info('[AVPlayerManager] Player not initialized, initializing...');
       await avplayerClass.init();
     }
 
@@ -572,11 +575,17 @@ export default class avplayerClass {
 
     // Use found index or fallback to first song
     const targetIndex = searchIndex >= 0 ? searchIndex : 0;
+    const targetSong = avplayerClass.playlist[targetIndex];
 
-    console.log(`playSongByName: "${songName}" -> index ${targetIndex}`);
+    if (searchIndex >= 0) {
+      console.info(`[AVPlayerManager] Found exact match for "${songName}" at index ${targetIndex}`);
+    } else {
+      console.warn(`[AVPlayerManager] Song "${songName}" not found, falling back to first song: "${targetSong.name}"`);
+    }
 
     // Play the song using existing method
     await avplayerClass.playSongByIndex(targetIndex);
+    console.info('[AVPlayerManager] playSongByName completed successfully');
   }
 
   static updatestate(): void {

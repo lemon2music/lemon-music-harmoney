@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deeplink Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .test-link {
+            display: block;
+            padding: 12px 20px;
+            margin: 10px 0;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .test-link:hover {
+            background-color: #0056b3;
+        }
+        .test-link.invalid {
+            background-color: #dc3545;
+        }
+        .test-link.invalid:hover {
+            background-color: #c82333;
+        }
+        .description {
+            color: #666;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+        .expected {
+            color: #28a745;
+            font-size: 14px;
+            margin: 5px 0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎵 Lemon Music Deeplink Test Page</h1>
+    <p>Click the links below to test the deeplink functionality:</p>
+
+    <!-- Valid Song Tests -->
+    <div class="test-section">
+        <h2>✅ Valid Song Tests</h2>
+
+        <a href="mymusic://play?song=起风了" class="test-link">
+            Test: 起风了 (Valid Song)
+        </a>
+        <p class="description">URI: mymusic://play?song=起风了</p>
+        <p class="expected">Expected: Play "起风了" and navigate to Playnow page</p>
+
+        <a href="mymusic://play?song=篝火旁" class="test-link">
+            Test: 篝火旁 (Valid Song)
+        </a>
+        <p class="description">URI: mymusic://play?song=篝火旁</p>
+        <p class="expected">Expected: Play "篝火旁" and navigate to Playnow page</p>
+
+        <a href="mymusic://play?song=唯一" class="test-link">
+            Test: 唯一 (Valid Song)
+        </a>
+        <p class="description">URI: mymusic://play?song=唯一</p>
+        <p class="expected">Expected: Play "唯一" and navigate to Playnow page</p>
+    </div>
+
+    <!-- Invalid Song Tests -->
+    <div class="test-section">
+        <h2>❌ Invalid Song Tests</h2>
+
+        <a href="mymusic://play?song=不存在的歌曲" class="test-link">
+            Test: 不存在的歌曲 (Invalid Song)
+        </a>
+        <p class="description">URI: mymusic://play?song=不存在的歌曲</p>
+        <p class="expected">Expected: Fall back to first song and navigate to Playnow page</p>
+
+        <a href="mymusic://play?song=NonExistentSong123" class="test-link">
+            Test: NonExistentSong123 (Invalid English Song)
+        </a>
+        <p class="description">URI: mymusic://play?song=NonExistentSong123</p>
+        <p class="expected">Expected: Fall back to first song and navigate to Playnow page</p>
+    </div>
+
+    <!-- Edge Case Tests -->
+    <div class="test-section">
+        <h2>⚠️ Edge Case Tests</h2>
+
+        <a href="mymusic://play" class="test-link invalid">
+            Test: Missing Parameter
+        </a>
+        <p class="description">URI: mymusic://play</p>
+        <p class="expected">Expected: Show error toast and navigate to main page</p>
+
+        <a href="mymusic://invalid" class="test-link invalid">
+            Test: Malformed URI
+        </a>
+        <p class="description">URI: mymusic://invalid</p>
+        <p class="expected">Expected: Show error toast and navigate to main page</p>
+
+        <a href="mymusic://play?song=" class="test-link invalid">
+            Test: Empty Song Name
+        </a>
+        <p class="description">URI: mymusic://play?song=</p>
+        <p class="expected">Expected: Show error toast and navigate to main page</p>
+    </div>
+
+    <!-- Special Character Tests -->
+    <div class="test-section">
+        <h2>🔣 Special Character Tests</h2>
+
+        <a href="mymusic://play?song=春娇与志明" class="test-link">
+            Test: 春娇与志明 (Chinese Characters)
+        </a>
+        <p class="description">URI: mymusic://play?song=春娇与志明</p>
+        <p class="expected">Expected: Play "春娇与志明" and navigate to Playnow page</p>
+
+        <a href="mymusic://play?song=Catch%20My%20Breath" class="test-link">
+            Test: Catch My Breath (URL Encoded Spaces)
+        </a>
+        <p class="description">URI: mymusic://play?song=Catch%20My%20Breath</p>
+        <p class="expected">Expected: Play "Catch My Breath" and navigate to Playnow page</p>
+    </div>
+
+    <div class="test-section">
+        <h2>📝 Testing Instructions</h2>
+        <ol>
+            <li>Install the app on your device/emulator</li>
+            <li>Open this HTML file in a browser on the same device</li>
+            <li>Click each test link and verify the expected behavior</li>
+            <li>Check console logs for detailed debugging information</li>
+        </ol>
+    </div>
+</body>
+</html>

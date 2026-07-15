@@ -1,3 +1,4 @@
+import url from '@ohos.url';
 import avplayerClass from './avplayermanager';
 import router from '@ohos.router';
 import { promptAction } from '@kit.ArkUI';
@@ -15,7 +16,10 @@ export class DeeplinkHandler {
    * @returns DeeplinkAction or null if invalid
    */
   static parseDeeplink(uri: string): DeeplinkAction | null {
+    console.info('[DeeplinkHandler] Parsing URI:', uri);
+
     if (!uri || typeof uri !== 'string') {
+      console.error('[DeeplinkHandler] Invalid URI type or empty');
       return null;
     }
 
@@ -25,26 +29,29 @@ export class DeeplinkHandler {
       const match = uri.match(urlPattern);
 
       if (!match) {
-        console.error('DeeplinkHandler: URI does not match expected pattern');
+        console.error('[DeeplinkHandler] URI does not match expected pattern');
         return { type: 'unknown' };
       }
 
       const queryString = match[1];
-      const params = new URLSearchParams(queryString);
+      const params = new url.URLParams(queryString);
       const songName = params.get('song');
 
       if (!songName || songName.trim().length === 0) {
-        console.warn('DeeplinkHandler: Missing or empty song parameter');
+        console.warn('[DeeplinkHandler] Missing or empty song parameter');
         return { type: 'unknown' };
       }
 
+      const decodedName = decodeURIComponent(songName.trim());
+      console.info('[DeeplinkHandler] Successfully parsed, song:', decodedName);
+
       return {
         type: 'play_song',
-        songName: decodeURIComponent(songName.trim())
+        songName: decodedName
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('DeeplinkHandler: Failed to parse URI:', errorMessage);
+      console.error('[DeeplinkHandler] Failed to parse URI:', errorMessage);
       return { type: 'unknown' };
     }
   }
@@ -54,7 +61,10 @@ export class DeeplinkHandler {
    * @param action The action to process
    */
   static async processAction(action: DeeplinkAction): Promise<void> {
+    console.info('[DeeplinkHandler] Processing action:', JSON.stringify(action));
+
     if (action.type === 'unknown') {
+      console.warn('[DeeplinkHandler] Unknown action type, showing error');
       await DeeplinkHandler.showErrorToast('Invalid deeplink format');
       await DeeplinkHandler.navigateToMain();
       return;
@@ -62,14 +72,16 @@ export class DeeplinkHandler {
 
     if (action.type === 'play_song' && action.songName) {
       try {
+        console.info('[DeeplinkHandler] Initiating playback for song:', action.songName);
         // Initiate playback
         await avplayerClass.playSongByName(action.songName);
 
         // Navigate to Playnow page
+        console.info('[DeeplinkHandler] Playback initiated, navigating to player');
         await DeeplinkHandler.navigateToPlayer();
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error('DeeplinkHandler: Failed to process play action:', errorMessage);
+        console.error('[DeeplinkHandler] Failed to process play action:', errorMessage);
         await DeeplinkHandler.showErrorToast('Failed to play song');
         await DeeplinkHandler.navigateToMain();
       }

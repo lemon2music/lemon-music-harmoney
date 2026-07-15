@@ -63,10 +63,8 @@
             ],
             "uris": [
               {
-                "scheme": "mymusic",
-                "host": "play",
-                "path": "play",
-                "type": "*/*"
+                "scheme": "link",
+                "host": "com.ningmeng.music"
               }
             ]
           }
