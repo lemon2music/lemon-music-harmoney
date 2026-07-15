@@ -4,6 +4,7 @@ import { window } from '@kit.ArkUI';
 import avplayerClass from '../services/avplayermanager';
 import router from '@ohos.router'
 import { DeeplinkHandler } from '../services/deeplinkHandler';
+import { AuthService } from '../services/authservice';
 import { BusinessError } from '@kit.BasicServicesKit';
 
 export default class EntryAbility extends UIAbility {
@@ -31,6 +32,8 @@ export default class EntryAbility extends UIAbility {
     const rm = this.context.resourceManager;
     avplayerClass.setContext(this.context.cacheDir, this.context.filesDir, (path: string) => rm.getRawFileDescriptor(path));
 
+    AuthService.setContext(this.context)
+    AuthService.restore()
 
     console.info('MusicNotification: 已配置通知管理器的跳转目标')
     avplayerClass.init().then(async ()=>{
