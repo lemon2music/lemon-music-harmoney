@@ -1,5 +1,6 @@
 import { AlertDialog, ConfirmDialog, LoadingDialog, SelectDialog } from '@ohos.arkui.advanced.Dialog'
 import { router } from '@kit.ArkUI'
+import { AuthService } from '../services/authservice'
 
 @Entry
 @Component
@@ -157,22 +158,17 @@ struct Login_page {
   private async doLogin() {
     if (!this.validate()) { return }
     this.loading = true
-    try {
-      // 标记登录成功并持久化
+    const result = await AuthService.login(this.account.trim(), this.password)
+    if (result.success) {
       this.isLogin = true
       this.mainindex = true
-      // 设置一次性回到“我的”的标志，主页面 onPageShow 会切换到“我的”
       this.selectMineAfterLogin = true
-      // 模拟登录耗时
-      setTimeout(() => {
-        this.loading = false
-        // 返回到来源页（我的标签页），此时 UI 将根据 isLogin 显示正常
-        router.back()
-        this.error = ''
-      }, 1200)
-    } catch (e) {
       this.loading = false
-      this.error = '登录失败，请重试'
+      this.error = ''
+      router.back()
+    } else {
+      this.loading = false
+      this.error = result.message || '登录失败，请重试'
     }
   }
 
@@ -316,14 +312,7 @@ struct Login_page {
               this.dialogControllerCheckBox.open()
               return
             }
-            if (this.password.length<6){
-              this.error='密码过短，要求密码至少未6位！'
-            }
-            if (this.account === 'admin' && this.password === '123456') {
-              this.doLogin()
-            } else {
-              this.error = '账号或密码错误！请重试！'
-            }
+            this.doLogin()
           })
 
         // 辅助链接
