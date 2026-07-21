@@ -4,26 +4,26 @@
  */
 
 /** 登录成功返回的业务数据 */
-export interface LoginData {
-  token: string
-  userId: number
-  username: string
-  membershipLevel: string
-  permissions: string[]
+export class LoginData {
+  token: string = ''
+  userId: number = 0
+  username: string = ''
+  membershipLevel: string = ''
+  permissions: string[] = []
 }
 
 /** 后端统一响应体 */
-export interface ApiResponse {
-  success: boolean
-  message: string
-  data: LoginData | null
+export class ApiResponse {
+  success: boolean = true
+  message: string = ''
+  data: LoginData | null = null
 }
 
 /** 供调用方使用的登录结果 */
-export interface LoginResult {
-  success: boolean
-  message: string
-  data?: LoginData
+export class LoginResult {
+  success: boolean = false
+  message: string = ''
+  data: LoginData | null = null
 }
 
 /**
@@ -37,13 +37,13 @@ export function parseLoginResponse(raw: string): LoginResult {
   try {
     parsed = JSON.parse(raw) as ApiResponse
   } catch (_) {
-    return { success: false, message: '登录失败，请重试' }
+    return { success: false, message: '登录失败，请重试', data: null }
   }
   if (parsed === null || typeof parsed !== 'object') {
-    return { success: false, message: '登录失败，请重试' }
+    return { success: false, message: '登录失败，请重试' , data: null}
   }
   if (parsed.success && parsed.data && parsed.data.token) {
     return { success: true, message: parsed.message ?? 'ok', data: parsed.data }
   }
-  return { success: false, message: parsed.message || '登录失败，请重试' }
+  return { success: false, message: parsed.message || '登录失败，请重试' , data: null}
 }

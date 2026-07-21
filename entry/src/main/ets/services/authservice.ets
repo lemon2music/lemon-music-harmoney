@@ -13,19 +13,19 @@ const LOGIN_PATH = '/api/auth/login'
 const PREF_NAME = 'auth_prefs'
 const PREF_KEY_SESSION = 'auth_session'
 
-interface StoredSession {
-  token: string
-  userId: number
-  username: string
-  membershipLevel: string
-  permissions: string[]
+class StoredSession {
+  token: string = ''
+  userId: number = 0
+  username: string = ''
+  membershipLevel: string = ''
+  permissions: string[] = []
 }
 
 export class AuthService {
   private static ctx: common.Context | null = null
 
   static setContext(ctx: common.Context): void {
-    this.ctx = ctx
+    AuthService.ctx = ctx
   }
 
   static async login(username: string, password: string): Promise<LoginResult> {
@@ -41,33 +41,43 @@ export class AuthService {
         expectDataType: http.HttpDataType.STRING
       })
       if (resp.responseCode < 200 || resp.responseCode >= 300) {
-        return { success: false, message: '网络异常，请稍后重试' }
+        return { success: false, message: '网络异常，请稍后重试', data: null }
       }
       const raw = typeof resp.result === 'string' ? resp.result : ''
       const result = parseLoginResponse(raw)
       if (result.success && result.data) {
-        await this.persistSession(result.data)
-        this.applyToAppStorage(result.data)
+        await AuthService.persistSession(result.data)
+        const session: StoredSession = {
+          token: result.data.token,
+          userId: result.data.userId,
+          username: result.data.username,
+          membershipLevel: result.data.membershipLevel,
+          permissions: result.data.permissions
+        }
+        AuthService.applyToAppStorage(session)
       }
       return result
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       console.error('AuthService.login 失败:', msg)
-      return { success: false, message: '网络异常，请稍后重试' }
+      return { success: false, message: '网络异常，请稍后重试', data: null }
     } finally {
-      try { client.destroy() } catch (_) {}
+      try {
+        client.destroy()
+      } catch (_) {
+      }
     }
   }
 
   static async logout(): Promise<void> {
-    await this.clearSession()
-    this.clearAppStorage()
+    await AuthService.clearSession()
+    AuthService.clearAppStorage()
   }
 
   static async restore(): Promise<void> {
-    const session = await this.loadSession()
+    const session = await AuthService.loadSession()
     if (session) {
-      this.applyToAppStorage(session)
+      AuthService.applyToAppStorage(session)
     }
   }
 
@@ -86,11 +96,11 @@ export class AuthService {
   }
 
   private static async persistSession(data: LoginData): Promise<void> {
-    if (!this.ctx) {
+    if (!AuthService.ctx) {
       console.error('AuthService: 未设置 context，无法持久化会话')
       return
     }
-    const pref = await preferences.getPreferences(this.ctx, PREF_NAME)
+    const pref = await preferences.getPreferences(AuthService.ctx, PREF_NAME)
     const session: StoredSession = {
       token: data.token,
       userId: data.userId,
@@ -103,21 +113,30 @@ export class AuthService {
   }
 
   private static async clearSession(): Promise<void> {
-    if (!this.ctx) { return }
-    const pref = await preferences.getPreferences(this.ctx, PREF_NAME)
+    if (!AuthService.ctx) {
+      return
+    }
+    const pref = await preferences.getPreferences(AuthService.ctx, PREF_NAME)
     await pref.delete(PREF_KEY_SESSION)
     await pref.flush()
   }
 
   private static async loadSession(): Promise<StoredSession | null> {
-    if (!this.ctx) { return null }
-    const pref = await preferences.getPreferences(this.ctx, PREF_NAME)
+    if (!AuthService.ctx) {
+      return null
+    }
+    const pref = await preferences.getPreferences(AuthService.ctx, PREF_NAME)
     const raw = await pref.get(PREF_KEY_SESSION, '') as string
-    if (!raw) { return null }
+    if (!raw) {
+      return null
+    }
     try {
       const obj = JSON.parse(raw) as StoredSession
-      if (obj && obj.token) { return obj }
-    } catch (_) {}
+      if (obj && obj.token) {
+        return obj
+      }
+    } catch (_) {
+    }
     return null
   }
 }
