@@ -5,6 +5,7 @@ author:wuzheng
  */
 //我的
 import { router } from "@kit.ArkUI";
+import { AuthService } from '../services/authservice'
 AppStorage.SetOrCreate('name','空维')
 AppStorage.SetOrCreate('sex','男')
 AppStorage.SetOrCreate('age',20)
@@ -23,6 +24,16 @@ export struct my_page {
   @StorageLink('address')address:string=''
   @StorageLink('isLogin') isLogin:boolean=false
   @StorageLink('selectMineAfterLogin') selectMineAfterLogin:boolean=false
+  @StorageLink('username') username:string=''
+  @StorageLink('membershipLevel') membershipLevel:string=''
+  private membershipLabel(): string {
+    switch (this.membershipLevel) {
+      case 'NORMAL': return '普通会员'
+      case 'VIP': return 'VIP会员'
+      case '': return ''
+      default: return this.membershipLevel
+    }
+  }
   build() {
     Column(){
       if (!this.isLogin) {
@@ -55,11 +66,20 @@ export struct my_page {
         .borderRadius(100)
         .margin({top:20,bottom:20})
       Row({space:5}){
-        Text(this.name)
+        Text(this.username || this.name)
           .fontSize(24)
           .fontWeight(700)
           .fontColor('#ffda2620')
           .textAlign(TextAlign.Center)
+        if (this.membershipLabel()) {
+          Text(this.membershipLabel())
+            .fontSize(12)
+            .fontColor('#ffab884c')
+            .backgroundColor('#fff3e6')
+            .borderRadius(8)
+            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+            .margin({ left: 4 })
+        }
         Image($r('app.media.lv3'))
           .width(20)
           .aspectRatio(1)
@@ -158,7 +178,8 @@ export struct my_page {
           .width(25)
           .margin({ right:10 })
           .onClick(()=>{
-            // 清除登录状态并返回主页面
+            // 清除后端会话与本地登录状态并返回主页面
+            AuthService.logout().catch((e: Object) => console.error('logout failed', e))
             this.isLogin = false
             this.selectMineAfterLogin = false
             router.replaceUrl({ url: 'pages/mainpage' })

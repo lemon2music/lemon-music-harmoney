@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deeplink QR Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; text-align: center; }
+        .qr-container { margin: 30px 0; }
+        .link-text { background: #f5f5f5; padding: 10px; border-radius: 5px; font-family: monospace; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>🎵 Scan to Play Song</h1>
+    <div class="qr-container" id="qr-codes">
+        <!-- QR codes will be generated here -->
+    </div>
+
+    <script>
+        const deeplinks = [
+            'mymusic://play?song=起风了',
+            'mymusic://play?song=篝火旁',
+            'mymusic://play?song=唯一'
+        ];
+
+        deeplinks.forEach(link => {
+            const songName = link.split('=')[1];
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(link)}`;
+
+            const container = document.createElement('div');
+            container.innerHTML = `
+                <h3>${songName}</h3>
+                <img src="${qrUrl}" alt="QR Code for ${songName}">
+                <div class="link-text">${link}</div>
+            `;
+            document.getElementById('qr-codes').appendChild(container);
+        });
+    </script>
+</body>
+</html>
