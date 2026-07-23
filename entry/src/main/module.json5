@@ -1,5 +1,15 @@
 {
   "module": {
+    "metadata": [
+      {
+        "name": "app_id",
+        "value": "6917611511280955995"
+      },
+      {
+        "name": "client_id",
+        "value": "6917611511280955995"
+      }
+    ],
 //    "definePermissions": [
 //      {
 //        "name": "ohos.permission.SUBSCRIBE_NOTIFICATION",
