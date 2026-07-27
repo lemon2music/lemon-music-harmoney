@@ -102,6 +102,34 @@ export struct my_page {
       .backgroundColor('#f8f8f8')
       .padding(10)
       .margin({bottom:30})
+      //会员中心
+      Row(){
+        Row({space:20}){
+          Image($r('app.media.lv3'))
+            .width(25)
+            .fillColor('#FFD700')
+          Text('会员中心')
+            .fontColor('#333333')
+            .fontSize(20)
+            .fontWeight(400)
+        }
+        .margin({left:10,right:10})
+        .layoutWeight(1)
+        Image($r('app.media.xiayibu'))
+          .fillColor('#888888')
+          .width(25)
+          .margin({ right:10 })
+      }
+      .width('100%')
+      .height(50)
+      .backgroundColor(Color.White)
+      .borderRadius(10)
+      .justifyContent(FlexAlign.SpaceBetween)
+      .onClick(()=>{
+        router.pushUrl({
+          url:'otherpages/membership_page'
+        })
+      })
       //外连转换
       Row(){
         Row({space:20}){

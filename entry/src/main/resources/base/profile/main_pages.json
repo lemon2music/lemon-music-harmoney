@@ -15,6 +15,7 @@
     "otherpages/song_list",
     "otherpages/web_page",
     "otherpages/login_page",
+    "otherpages/membership_page",
     "pages/mainpage"
   ]
 }

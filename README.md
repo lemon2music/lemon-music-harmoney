@@ -66,7 +66,7 @@
 - **主页**: 轮播图、每日推荐、推荐歌单、其他应用入口
 - **发现页**: 音乐搜索、分类浏览
 - **评论页**: 评论列表、点赞互动
-- **我的页面**: 个人信息管理、设置、外联转换
+- **我的页面**: 个人信息管理、会员中心、设置、外联转换
 
 ### 👤 用户系统
 
@@ -74,6 +74,13 @@
 - **个人信息**: 头像、昵称、性别、年龄、生日、星座、地址
 - **状态持久化**: 登录状态持久化存储
 - **退出登录**: 安全的退出登录功能
+
+### 💎 会员与订阅
+
+- **会员中心**: 查看当前会员等级（普通/VIP），跳转会员中心页面
+- **IAP自动订阅**: 集成华为IAP Kit，查询自动续期订阅商品并展示
+- **订阅购买**: 支持一键购买VIP订阅，购买成功自动更新会员等级
+- **会员标识**: 个人页展示VIP会员徽章
 
 ### 🎯 智能推荐
 
@@ -84,6 +91,7 @@
 ### 🔧 其他功能
 
 - **搜索功能**: 音乐搜索、歌手搜索
+- **会员订阅**: IAP自动续期订阅，VIP会员权益
 - **外联转换**: 支持外链音乐转换
 - **网页跳转**: 内置浏览器支持
 - **剪贴板**: 长按复制链接功能
@@ -119,7 +127,8 @@
 
 - **@kit.MediaKit**: AVPlayer音频播放
 - **@kit.ArkUI**: UI组件、路由管理
-- **@kit.BasicServicesKit**: 事件总线
+- **@kit.IAPKit**: 应用内支付（IAP），自动续期订阅商品查询与购买
+- **@kit.BasicServicesKit**: 事件总线、业务错误处理
 - **@kit.NotificationKit**: 通知管理
 - **@kit.AbilityKit**: 能力管理
 - **@kit.PerformanceAnalysisKit**: 性能分析
@@ -265,6 +274,7 @@ MyAppmusic/
 │   │   │   │   │   ├── age_page.ets       # 年龄页面
 │   │   │   │   │   ├── birthday_page.ets  # 生日页面
 │   │   │   │   │   ├── login_page.ets     # 登录页面
+│   │   │   │   │   ├── membership_page.ets # 会员中心（IAP订阅）
 │   │   │   │   │   ├── my_redirect.ets    # 重定向页面
 │   │   │   │   │   ├── myshezhi.ets       # 设置页面
 │   │   │   │   │   ├── name_page.ets      # 姓名页面
@@ -280,7 +290,10 @@ MyAppmusic/
 │   │   │   │   │   ├── mainpage.ets       # 主页面
 │   │   │   │   │   └── start.ets          # 启动页
 │   │   │   │   └── services/       # 服务层
-│   │   │   │       └── avplayermanager.ets # 播放器管理
+│   │   │   │       ├── authModels.ets      # 认证数据模型
+│   │   │   │       ├── authservice.ets     # 认证服务（登录/登出/会话）
+│   │   │   │       ├── avplayermanager.ets # 播放器管理
+│   │   │   │       └── deeplinkHandler.ets # 深度链接处理
 │   │   │   ├── resources/          # 资源文件
 │   │   │   │   ├── base/           # 基础资源
 │   │   │   │   │   ├── element/    # 元素资源
@@ -365,6 +378,14 @@ avplayerClass.playmodel = 'repeat';
 // 随机播放
 avplayerClass.playmodel = 'random';
 ```
+
+#### 会员中心与订阅
+
+1. 进入"我的"页面
+2. 点击"会员中心"查看当前会员等级
+3. 选择订阅商品（月度/年度等）
+4. 点击"订阅"按钮完成IAP购买
+5. 购买成功后自动升级为VIP会员
 
 #### 外联转换
 
@@ -573,7 +594,18 @@ export const songlist: songtype[] = [
 3. 点击调试按钮
 4. 查看日志输出
 
-### Q8: 如何打包发布？
+### Q8: 如何配置IAP订阅商品？
+
+**A**: 在华为开发者后台（AppGallery Connect）配置自动续期订阅商品：
+1. 登录 [AppGallery Connect](https://developer.huawei.com/) 后台
+2. 进入"应用内支付" > "商品管理"
+3. 添加自动续期订阅商品（设置productId、名称、价格、订阅周期等）
+4. 商品审核通过后，`iap.queryProducts()` 即可查询到
+5. 如需指定商品ID，修改 `membership_page.ets` 中 `queryParam.productIds` 数组
+
+---
+
+### Q9: 如何打包发布？
 
 **A**: 
 1. 配置发布签名
@@ -684,23 +716,11 @@ SOFTWARE.
 
 ---
 
-## 📞 联系方式
-
-### 作者信息
-
-- **作者**: silver-kite
-- **邮箱**: wu481369364@qq.com
-- **GitHub**: https://github.com/silver-kite-wu
-
-### 项目链接
-
-- **项目主页**: https://github.com/silver-kite-wu/HarmonyOS-MyAppmusic.git
-
 ---
 
 ## 🙏 致谢
 
-感谢所有为这个项目做出贡献的开发者，欢迎PR！
+- **参考项目**: https://github.com/silver-kite-wu/HarmonyOS-MyAppmusic.git
 
 ---
 
@@ -709,6 +729,5 @@ SOFTWARE.
 
 **如果这个项目对你有帮助，请给它一个 ⭐️ Star！**
 
-Made with ❤️ by silver-kite
 
 </div>
