@@ -6,13 +6,13 @@ author:wuzheng
 //我的
 import { router } from "@kit.ArkUI";
 import { AuthService } from '../services/authservice'
-AppStorage.SetOrCreate('name','空维')
-AppStorage.SetOrCreate('sex','男')
-AppStorage.SetOrCreate('age',20)
-AppStorage.SetOrCreate('year','2006年1月1日')
-AppStorage.SetOrCreate('star','摩羯座')
-AppStorage.SetOrCreate('address','郑州市')
-AppStorage.SetOrCreate('num','16666666666')
+AppStorage.setOrCreate('name','空维')
+AppStorage.setOrCreate('sex','男')
+AppStorage.setOrCreate('age',20)
+AppStorage.setOrCreate('year','2006年1月1日')
+AppStorage.setOrCreate('star','摩羯座')
+AppStorage.setOrCreate('address','郑州市')
+AppStorage.setOrCreate('num','16666666666')
 @Component
 export struct my_page {
   @StorageLink('touxiang') touxiang:string=''
