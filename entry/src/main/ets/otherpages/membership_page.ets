@@ -5,6 +5,8 @@ import { router } from '@kit.ArkUI'
 import { iap } from '@kit.IAPKit'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { common } from '@kit.AbilityKit'
+import { JWSUtil } from '../common/JWSUtil'
+import { SubGroupStatusPayload } from '../common/IapDataModel'
 
 // 商品信息本地展示模型
 interface SubscriptionProductDisplay {
@@ -43,7 +45,7 @@ struct MembershipPage {
       })
       const queryParam: iap.QueryProductsParameter = {
         productType: iap.ProductType.AUTORENEWABLE,
-        productIds: ['vip_normal_month','vip_normal_quarter','vip_normal_year']  // 空数组查询所有已配置的自动续期商品
+        productIds: ['vip_normal_month']  // 空数组查询所有已配置的自动续期商品
       }
       const result: iap.Product[] = await iap.queryProducts(context, queryParam)
       if (result && result.length > 0) {
@@ -113,6 +115,34 @@ struct MembershipPage {
       // 购买成功后更新会员等级
       this.membershipLevel = 'VIP'
       AppStorage.setOrCreate('membershipLevel', 'VIP')
+      const jwsSubscriptionStatus: string = JSON.parse(purchaseResult.purchaseData).jwsSubscriptionStatus;
+      if (!jwsSubscriptionStatus) {
+        return;
+      }
+      const subscriptionStatus: string = JWSUtil.decodeJwsObj(jwsSubscriptionStatus);
+      if (!subscriptionStatus) {
+        return;
+      }
+      // 需自定义SubGroupStatusPayload类，包含的信息请参见SubGroupStatusPayload
+      const subGroupStatusPayload: SubGroupStatusPayload = JSON.parse(subscriptionStatus);
+      const lastSubscriptionStatus = subGroupStatusPayload.lastSubscriptionStatus;
+      if (!lastSubscriptionStatus || lastSubscriptionStatus.status !== '1') {
+        return;
+      }
+      const purchaseOrderPayload = lastSubscriptionStatus.lastPurchaseOrder;
+      if (purchaseOrderPayload === undefined) {
+        return;
+      }
+      const finishPurchaseParam: iap.FinishPurchaseParameter = {
+        productType: iap.ProductType.AUTORENEWABLE,
+        purchaseToken: purchaseOrderPayload.purchaseToken,
+        purchaseOrderId: purchaseOrderPayload.purchaseOrderId
+      };
+      iap.finishPurchase(context, finishPurchaseParam).then(() => {
+        console.info('IAP finishPurchase success:', JSON.stringify(finishPurchaseParam))
+      }).catch((err: BusinessError) => {
+        console.error('IAP finishPurchase failed:', err.code, err.message)
+      })
     } catch (err) {
       const e = err as BusinessError
       console.error('IAP purchase failed:', e.code, e.message)
