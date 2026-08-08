@@ -12,7 +12,7 @@
 
 ## 2. 后端接口契约（已实测）
 
-`POST http://47.119.121.254:8080/api/auth/login`
+`POST https://www.weixing.xin/api/auth/login`
 
 请求体：
 ```json
@@ -58,7 +58,7 @@
 ```
 AuthService
 ├── 常量
-│   ├── API_BASE = 'http://47.119.121.254:8080'
+│   ├── API_BASE = 'https://www.weixing.xin'
 │   ├── LOGIN_PATH = '/api/auth/login'
 │   ├── PREF_NAME = 'auth_prefs'
 │   └── PREF_KEY_SESSION = 'auth_session'
@@ -177,7 +177,7 @@ my_page 退出按钮 → AuthService.logout() → 现有 router.replaceUrl(mainp
 **头号风险：明文 HTTP 访问**
 - 登录接口为 `http://`（明文）。`module.json5` 中 `ohos.permission.INTERNET` 当前被整段注释，必须放开。
 - 现有 `avplayermanager` 下载音乐时主动把 `http → https` 升级（行 350-352、412-414），暗示明文流量可能受限。
-- 实现阶段需优先验证：放开 INTERNET 权限后，`@ohos.net.http` 能否直接请求 `http://47.119.121.254:8080`。如被系统拦截，需配置明文放行；若系统层面无法放行该 IP，则需后端提供 https 或经代理——这是唯一可能动摇本方案的点，需在实现首步确认。
+- 实现阶段需优先验证：放开 INTERNET 权限后，`@ohos.net.http` 能否直接请求 `https://www.weixing.xin`。如被系统拦截，需配置明文放行；若系统层面无法放行该 IP，则需后端提供 https 或经代理——这是唯一可能动摇本方案的点，需在实现首步确认。
 
 ## 10. 不在范围内
 
