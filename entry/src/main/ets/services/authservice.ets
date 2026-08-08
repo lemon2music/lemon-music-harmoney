@@ -8,7 +8,7 @@ import preferences from '@ohos.data.preferences'
 import common from '@ohos.app.ability.common'
 import { parseLoginResponse, LoginData, LoginResult } from './authModels'
 
-const API_BASE = 'http://47.119.121.254:8080'
+const API_BASE = 'https://www.weixing.xin'
 const LOGIN_PATH = '/api/auth/login'
 const PREF_NAME = 'auth_prefs'
 const PREF_KEY_SESSION = 'auth_session'

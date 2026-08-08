@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 把假的硬编码登录替换为真实后端会员认证（`POST http://47.119.121.254:8080/api/auth/login`），持久化会话、启动恢复、在「我的」页展示会员等级徽章。
+**Goal:** 把假的硬编码登录替换为真实后端会员认证（`POST https://www.weixing.xin/api/auth/login`），持久化会话、启动恢复、在「我的」页展示会员等级徽章。
 
 **Architecture:** 新建独立 `AuthService` 静态服务（对标 `avplayermanager.ets` 风格）封装登录调用与会话持久化；响应解析抽成纯函数 `parseLoginResponse` 单独成文件以便本地单元测试。会话用 `@ohos.data.preferences` 持久化，`AppStorage` 作响应式层驱动 UI。`isLogin` 沿用现有 `mainpage.ets` 的 `PersistentStorage` 管理，`AuthService` 不接手，避免双写冲突。
 
@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - 目标 SDK：HarmonyOS 5.0.0 (API 12)，Stage 模型。明文 HTTP 在 Stage 模型默认允许（无需 `usesCleartextTraffic` 等配置），仅需声明 `ohos.permission.INTERNET`。
-- 后端 BASE：`http://47.119.121.254:8080`，登录路径 `/api/auth/login`，请求体 `{"username":string,"password":string}`，`Content-Type: application/json`。
+- 后端 BASE：`https://www.weixing.xin`，登录路径 `/api/auth/login`，请求体 `{"username":string,"password":string}`，`Content-Type: application/json`。
 - AppStorage 键约定：`isLogin`（由 `mainpage.ets` 的 PersistentStorage 拥有，**AuthService 不得写**）、`username`、`membershipLevel`、`userId`、`token`（后四个由 AuthService 管理）。
 - 服务风格：静态类 + `setContext()` 注入上下文（对标 `services/avplayermanager.ets`、`services/deeplinkHandler.ets`）。命名导出 `{ AuthService }`。
 - `@ohos.net.http` 调用必须 `finally { client.destroy() }`，超时 15s。
@@ -275,7 +275,7 @@ import preferences from '@ohos.data.preferences'
 import common from '@ohos.app.ability.common'
 import { parseLoginResponse, LoginData, LoginResult } from './authModels'
 
-const API_BASE = 'http://47.119.121.254:8080'
+const API_BASE = 'https://www.weixing.xin'
 const LOGIN_PATH = '/api/auth/login'
 const PREF_NAME = 'auth_prefs'
 const PREF_KEY_SESSION = 'auth_session'

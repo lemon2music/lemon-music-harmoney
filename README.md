@@ -601,9 +601,35 @@ export const songlist: songtype[] = [
 2. 进入"应用内支付" > "商品管理"
 3. 添加自动续期订阅商品（设置productId、名称、价格、订阅周期等）
 4. 商品审核通过后，`iap.queryProducts()` 即可查询到
-5. 如需指定商品ID，修改 `membership_page.ets` 中 `queryParam.productIds` 数组
+5. 如需指定商品ID，修改 `membership_page.ets` 中 `querySubscriptionProducts()` 的 productIds 参数
+
+### Q8.1: IAP 购买流程是怎样的？需要哪些后端接口？
+
+**A**: 客户端通过 `services/IapService.ets` 严格遵循官方标准流程，进入会员页时自动补单（处理掉单）。后端为 `music-back-service`（`IapController` / `MembershipController`）。
+
+```
+环境检测(isSandboxActivated)
+  → 查询商品(GET /api/iap/products 取后端 id + iap.queryProducts 取实时价)
+  → 查询购买状态(queryPurchases + GET /api/iap/entitlement，命中则禁用按钮，避免重复购买)
+  → 服务器预下单(POST /api/iap/orders，返回 orderNo 作为 developerPayload)
+  → 收银台(createPurchase，developerPayload=orderNo)
+  → 上报验签发放权益(POST /api/iap/orders/report)
+  → 端侧确认发货(finishPurchase)
+```
+
+**后端接口（已实现）：**
+
+| 接口 | 入参 | 返回 |
+|------|------|------|
+| `GET /api/iap/products` | 凭 token | `[{ id, name, huaweiProductId, iapProductType, price, currency, subscriptionType, description }]` |
+| `GET /api/iap/entitlement` | 凭 token | `{ vipActive, subscriptionExpireAt, ownedHuaweiProductIds }` |
+| `POST /api/iap/orders` | `{ iapProductId }` | `{ orderNo, huaweiProductId, iapProductType, amount, currency }` |
+| `POST /api/iap/orders/report` | `{ iapProductType, purchaseData }` | `{ fulfilled, orderId, message }` |
+
+关键：`developerPayload` = 预下单返回的 `orderNo`，服务端凭它在 `/orders/report` 中对账发货；购买与补单共用此接口。验签发货已处理幂等与退款回收（`purchaseOrderRevocationReasonCode` 非空不发，已发放过的不重复发）。
 
 ---
+
 
 ### Q9: 如何打包发布？
 

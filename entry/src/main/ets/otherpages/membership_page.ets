@@ -1,155 +1,138 @@
 /*
- * 会员中心页面：查询 IAP 自动订阅商品并展示
+ * 会员中心页面
+ * 基于 IapService 实现完整标准流程：
+ *   环境检测 → 查询商品(后端+实时价) → 查询购买状态(避免重复购买)
+ *   → 预下单 → 收银台 → 验签发货 → 确认发货
+ * 进入页面时执行补单（queryPurchases），处理掉单。
  */
-import { router } from '@kit.ArkUI'
-import { iap } from '@kit.IAPKit'
-import { BusinessError } from '@kit.BasicServicesKit'
+import { router, promptAction } from '@kit.ArkUI'
+import { BusinessError, emitter } from '@kit.BasicServicesKit'
 import { common } from '@kit.AbilityKit'
-import { JWSUtil } from '../common/JWSUtil'
-import { SubGroupStatusPayload } from '../common/IapDataModel'
-
-// 商品信息本地展示模型
-interface SubscriptionProductDisplay {
-  productId: string
-  productName: string
-  productDesc: string
-  price: string
-  originalPrice: string
-  subscriptionPeriod: string
-  subProductType: iap.ProductType
-}
+import iapService, { MembershipProduct, IapEnvironmentStatus } from '../services/IapService'
+import AuthService from '../services/authservice'
+import { EVENT_TOKEN_MISSING } from '../services/iapApiService'
 
 @Entry
 @Component
 struct MembershipPage {
-  @State productList: SubscriptionProductDisplay[] = []
+  @State productList: MembershipProduct[] = []
   @State loading: boolean = true
+  @State purchasing: boolean = false
   @State errorMsg: string = ''
   @StorageLink('membershipLevel') membershipLevel: string = ''
+  /** 环境不可用（如账号服务地非中国境内）时隐藏购买入口 */
+  @State envAvailable: boolean = true
 
   aboutToAppear() {
-    this.querySubscriptionProducts()
+    this.initAndLoad()
+    // 监听 token 缺失事件
+    try {
+      emitter.on(EVENT_TOKEN_MISSING, this.handleTokenMissing)
+    } catch (e) {
+      console.error('Failed to register token missing listener:', e)
+    }
   }
 
-  // 查询 IAP 自动续期订阅商品
-  private async querySubscriptionProducts() {
+  aboutToDisappear() {
+    // 取消监听 token 缺失事件
+    try {
+      emitter.off(EVENT_TOKEN_MISSING, this.handleTokenMissing)
+    } catch (e) {
+      console.error('Failed to unregister token missing listener:', e)
+    }
+  }
+
+  /**
+   * 处理 token 缺失事件：执行登出并引导用户重新登录
+   */
+  private handleTokenMissing = (event: emitter.EventData): void => {
+    console.warn('MembershipPage: 收到 token 缺失事件，执行登出')
+    this.performLogout()
+  }
+
+  /**
+   * 执行登出操作
+   */
+  private async performLogout() {
+    try {
+      // 调用 AuthService 的登出方法
+      await AuthService.logout()
+
+      // 清除本地登录状态
+      this.membershipLevel = ''
+
+      // 显示提示信息
+      promptAction.showToast({
+        message: '登录信息已失效，请重新登录',
+        duration: 2000
+      })
+
+      // 延迟后返回上一页或导航到登录页
+      setTimeout(() => {
+        router.back()
+      }, 2000)
+    } catch (e) {
+      console.error('Logout failed:', e)
+      promptAction.showToast({
+        message: '登出失败，请手动重启应用',
+        duration: 2000
+      })
+    }
+  }
+
+  // 初始化 IAP（环境检测 + 补单）并加载商品
+  private async initAndLoad() {
     this.loading = true
     this.errorMsg = ''
     try {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext
-      iap.isSandboxActivated(context).then(state => {
-        console.info('IAP state is:', state)
-      }).catch((err: BusinessError) => {
-        console.error('IAP queryProducts failed:', err.code, err.message)
-        this.errorMsg = `查询沙盒失败: ${err.message || '请检查网络或IAP配置'}`
-      })
-      const queryParam: iap.QueryProductsParameter = {
-        productType: iap.ProductType.AUTORENEWABLE,
-        productIds: ['vip_normal_month']  // 空数组查询所有已配置的自动续期商品
+      await iapService.init(context)
+
+      const env: IapEnvironmentStatus | null = iapService.getEnvironment()
+      if (env && !env.isActivated) {
+        this.envAvailable = false
+        this.errorMsg = '当前环境不支持应用内支付'
+        return
       }
-      const result: iap.Product[] = await iap.queryProducts(context, queryParam)
-      if (result && result.length > 0) {
-        this.productList = result.map((item: iap.Product) => {
-          return this.toDisplayProduct(item)
-        })
-      } else {
+
+      this.productList = await iapService.loadProducts()
+      if (this.productList.length === 0) {
         this.errorMsg = '暂无可用的订阅商品'
       }
+      
     } catch (err) {
       const e = err as BusinessError
-      console.error('IAP queryProducts failed:', e.code, e.message)
-      this.errorMsg = `查询失败: ${e.message || '请检查网络或IAP配置'}`
+      console.error('IAP init failed:', e.code, e.message)
+      this.errorMsg = `初始化失败: ${e.message || '请检查网络或IAP配置'}`
     } finally {
       this.loading = false
     }
   }
 
-  // 将 IAP Product 转为展示模型
-  private toDisplayProduct(product: iap.Product): SubscriptionProductDisplay {
-    const priceVal = product.localPrice ?? '0'
-    const originalPriceVal: string = product.originalLocalPrice ?? product.localPrice ?? '0'
-    return {
-      productId: product.id ?? '',
-      productName: product.name ?? product.id ?? '',
-      productDesc: product.description ?? '',
-      price: typeof priceVal === 'number' ? `¥${(priceVal / 100).toFixed(2)}` : String(priceVal),
-      originalPrice: typeof originalPriceVal === 'number' ? `¥${(originalPriceVal / 100).toFixed(2)}` : String(originalPriceVal),
-      subscriptionPeriod: this.formatSubPeriod(product.type, product.subscriptionInfo),
-      subProductType: product.type ?? iap.ProductType.AUTORENEWABLE
+  // 购买（走完整流程：预下单 → 收银台 → 验签发货 → 确认发货）
+  private async buySubscription(product: MembershipProduct) {
+    if (this.purchasing) {
+      return
     }
-  }
-
-  // 格式化订阅周期描述
-  private formatSubPeriod(subType?: iap.ProductType, subscriptionInfo?: iap.SubscriptionInfo): string {
-    if (subscriptionInfo) {
-      const count = subscriptionInfo.periodCount ?? 1;
-      const unit = subscriptionInfo.periodUnit;
-
-      // 鸿蒙 IAP periodUnit 枚举值映射：0-天, 1-周, 2-月, 3-年
-      const unitMap: Record<number, string> = {
-        0: '天',
-        1: '周',
-        2: '月',
-        3: '年'
-      };
-
-      const unitStr = unitMap[unit] ?? '月';
-
-      // count 为 1 时展示 "每月"/"每年"，大于 1 时展示 "3月"/"2年"
-      return count === 1 ? `每${unitStr}` : `${count}${unitStr}`;
-    }
-
-    return '自动续期';
-  }
-
-  // 购买订阅商品
-  private async buySubscription(productId: string) {
+    this.purchasing = true
+    this.errorMsg = ''
     try {
-      const context = this.getUIContext().getHostContext() as common.UIAbilityContext
-      const purchaseParam: iap.PurchaseParameter = {
-        productId: productId,
-        productType: iap.ProductType.AUTORENEWABLE
+      const result = await iapService.purchaseFlow(product)
+      if (result.success) {
+        if (result.membershipLevel) {
+          this.membershipLevel = result.membershipLevel
+        }
+        promptAction.showToast({ message: result.message || '开通成功' })
+        this.productList = await iapService.loadProducts()
+      } else if (result.message) {
+        this.errorMsg = result.message
       }
-      const purchaseResult = await iap.createPurchase(context, purchaseParam)
-      console.info('IAP purchase success:', JSON.stringify(purchaseResult))
-      // 购买成功后更新会员等级
-      this.membershipLevel = 'VIP'
-      AppStorage.setOrCreate('membershipLevel', 'VIP')
-      const jwsSubscriptionStatus: string = JSON.parse(purchaseResult.purchaseData).jwsSubscriptionStatus;
-      if (!jwsSubscriptionStatus) {
-        return;
-      }
-      const subscriptionStatus: string = JWSUtil.decodeJwsObj(jwsSubscriptionStatus);
-      if (!subscriptionStatus) {
-        return;
-      }
-      // 需自定义SubGroupStatusPayload类，包含的信息请参见SubGroupStatusPayload
-      const subGroupStatusPayload: SubGroupStatusPayload = JSON.parse(subscriptionStatus);
-      const lastSubscriptionStatus = subGroupStatusPayload.lastSubscriptionStatus;
-      if (!lastSubscriptionStatus || lastSubscriptionStatus.status !== '1') {
-        return;
-      }
-      const purchaseOrderPayload = lastSubscriptionStatus.lastPurchaseOrder;
-      if (purchaseOrderPayload === undefined) {
-        return;
-      }
-      const finishPurchaseParam: iap.FinishPurchaseParameter = {
-        productType: iap.ProductType.AUTORENEWABLE,
-        purchaseToken: purchaseOrderPayload.purchaseToken,
-        purchaseOrderId: purchaseOrderPayload.purchaseOrderId
-      };
-      iap.finishPurchase(context, finishPurchaseParam).then(() => {
-        console.info('IAP finishPurchase success:', JSON.stringify(finishPurchaseParam))
-      }).catch((err: BusinessError) => {
-        console.error('IAP finishPurchase failed:', err.code, err.message)
-      })
     } catch (err) {
       const e = err as BusinessError
       console.error('IAP purchase failed:', e.code, e.message)
-      // 用户取消购买不提示错误
-      if (e.code !== 17720011) {
-        this.errorMsg = `购买失败: ${e.message || '请稍后重试'}`
-      }
+      this.errorMsg = `购买失败: ${e.message || '请稍后重试'}`
+    } finally {
+      this.purchasing = false
     }
   }
 
@@ -216,6 +199,16 @@ struct MembershipPage {
         .width('100%')
         .margin({ top: 60 })
         .alignItems(HorizontalAlign.Center)
+      } else if (!this.envAvailable) {
+        Column() {
+          Text(this.errorMsg)
+            .fontSize(14)
+            .fontColor('#ff4d4f')
+            .textAlign(TextAlign.Center)
+        }
+        .width('100%')
+        .margin({ top: 60 })
+        .alignItems(HorizontalAlign.Center)
       } else if (this.errorMsg && this.productList.length === 0) {
         Column() {
           Text(this.errorMsg)
@@ -230,91 +223,114 @@ struct MembershipPage {
             .borderRadius(10)
             .margin({ top: 12 })
             .onClick(() => {
-              this.querySubscriptionProducts()
+              this.initAndLoad()
             })
         }
         .width('100%')
         .margin({ top: 60 })
         .alignItems(HorizontalAlign.Center)
       } else {
-        Column({ space: 12 }) {
-          ForEach(this.productList, (product: SubscriptionProductDisplay) => {
-            Row() {
-              // 左侧商品信息
-              Column() {
-                Text(product.productName)
-                  .fontSize(18)
-                  .fontWeight(FontWeight.Bold)
-                  .fontColor('#333')
-                  .maxLines(1)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-                if (product.productDesc) {
-                  Text(product.productDesc)
-                    .fontSize(12)
-                    .fontColor('#999')
-                    .margin({ top: 4 })
-                    .maxLines(2)
+        Scroll() {
+          Column({ space: 12 }) {
+            ForEach(this.productList, (product: MembershipProduct) => {
+              Row() {
+                // 左侧商品信息
+                Column() {
+                  Text(product.productName)
+                    .fontSize(18)
+                    .fontWeight(FontWeight.Bold)
+                    .fontColor('#333')
+                    .maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
-                }
-                Text(product.subscriptionPeriod)
-                  .fontSize(12)
-                  .fontColor('#ffab884c')
-                  .margin({ top: 4 })
-              }
-              .layoutWeight(1)
-              .alignItems(HorizontalAlign.Start)
-
-              // 右侧价格与购买按钮
-              Column() {
-                Text(product.price)
-                  .fontSize(22)
-                  .fontWeight(FontWeight.Bold)
-                  .fontColor('#ffab884c')
-                if (product.originalPrice !== product.price) {
-                  Text(`原价 ${product.originalPrice}`)
+                  if (product.productDesc) {
+                    Text(product.productDesc)
+                      .fontSize(12)
+                      .fontColor('#999')
+                      .margin({ top: 4 })
+                      .maxLines(2)
+                      .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  }
+                  Text(product.subscriptionPeriod)
                     .fontSize(12)
-                    .fontColor('#bbb')
-                    .decoration({ type: TextDecorationType.LineThrough })
+                    .fontColor('#ffab884c')
+                    .margin({ top: 4 })
                 }
-                Button(this.membershipLevel === 'VIP' ? '已开通' : '订阅')
-                  .height(32)
-                  .fontSize(13)
-                  .backgroundColor(this.membershipLevel === 'VIP' ? '#e0e0e0' : '#ffab884c')
-                  .fontColor(this.membershipLevel === 'VIP' ? '#999' : Color.Black)
-                  .borderRadius(8)
-                  .margin({ top: 6 })
-                  .enabled(this.membershipLevel !== 'VIP')
-                  .onClick(() => {
-                    this.buySubscription(product.productId)
-                  })
+                .layoutWeight(1)
+                .alignItems(HorizontalAlign.Start)
+
+                // 右侧价格与购买按钮
+                Column() {
+                  Text(product.price)
+                    .fontSize(22)
+                    .fontWeight(FontWeight.Bold)
+                    .fontColor('#ffab884c')
+                  if (product.originalPrice !== product.price) {
+                    Text(`原价 ${product.originalPrice}`)
+                      .fontSize(12)
+                      .fontColor('#bbb')
+                      .decoration({ type: TextDecorationType.LineThrough })
+                  }
+                  Button(this.buttonLabel(product))
+                    .height(32)
+                    .fontSize(13)
+                    .backgroundColor(this.buttonColor(product))
+                    .fontColor(product.owned ? '#999' : Color.Black)
+                    .borderRadius(8)
+                    .margin({ top: 6 })
+                    .enabled(!product.owned && !this.purchasing)
+                    .onClick(() => {
+                      this.buySubscription(product)
+                    })
+                }
+                .alignItems(HorizontalAlign.End)
+                .width(100)
               }
-              .alignItems(HorizontalAlign.End)
-              .width(100)
+              .width('100%')
+              .padding(16)
+              .borderRadius(12)
+              .backgroundColor(Color.White)
+              .shadow({ radius: 2, color: '#1a000000', offsetY: 1 })
+            })
+
+            // 错误提示（购买失败）
+            if (this.errorMsg) {
+              Text(this.errorMsg)
+                .fontSize(12)
+                .fontColor('#ff4d4f')
+                .margin({ top: 8 })
             }
-            .width('100%')
-            .padding(16)
-            .borderRadius(12)
-            .backgroundColor(Color.White)
-            .shadow({ radius: 2, color: '#1a000000', offsetY: 1 })
-          })
+          }
+          .width('100%')
         }
+        .layoutWeight(1)
         .margin({ top: 16 })
+        .scrollBar(BarState.Auto)
+        .edgeEffect(EdgeEffect.Spring)
       }
-
-      // 错误提示（购买失败）
-      if (this.errorMsg && this.productList.length > 0) {
-        Text(this.errorMsg)
-          .fontSize(12)
-          .fontColor('#ff4d4f')
-          .margin({ top: 8 })
-      }
-
-      Blank()
     }
     .width('100%')
     .height('100%')
     .padding({ left: 14, right: 14, top: 5, bottom: 5 })
     .backgroundColor('#f5f5f5')
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+  }
+
+  // 按钮文案：生效中 → 「使用中」，已拥有 → 「已开通」
+  private buttonLabel(product: MembershipProduct): string {
+    if (product.active) {
+      return '使用中'
+    }
+    if (product.owned) {
+      return '已开通'
+    }
+    return this.purchasing ? '处理中…' : '订阅'
+  }
+
+  // 按钮颜色：已拥有权益置灰
+  private buttonColor(product: MembershipProduct): ResourceColor {
+    if (product.owned) {
+      return '#e0e0e0'
+    }
+    return '#ffab884c'
   }
 }
